@@ -24,6 +24,7 @@ import  android.device.DeviceManager
 import android.device.Led
 import androidx.compose.ui.Alignment
 import android.device.LedManager
+import android.device.SettingProperty
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -42,12 +43,11 @@ class MainActivity : ComponentActivity() {
     val deviceManager = DeviceManager()
     val ledManager = LedManager()
     val printer = PrinterManager()
-
+    val settingProperty = SettingProperty()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        Toast.makeText(this, tsn, Toast.LENGTH_LONG).show()
+        Toast.makeText(applicationContext,printer.status.toString(),Toast.LENGTH_LONG).show()
         setContent {
             UrovoPrinterTestTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -70,13 +70,19 @@ class MainActivity : ComponentActivity() {
                                 "  ConsumerState<ConsumerStatefulWidget> createState() => _MainScreenState();\n" +
                                 "}\n")
                         Button(onClick = {
+                            try {
 
-                            val ac = BitmapFactory.decodeResource(resources, R.drawable.splash)
-//            val ac = captureScreen()
-//                            val b1 = toOpaqueWhite(ac)
-                            val b2 = scaleToWidth(ac, 384)     // try 384 first
-                            val b3 = toPureBlackWhite(b2, threshold = 110)
-                            showPrintPreviewDialog(b2)
+                                ledManager.enableLedIndicator(Led.LED_4,true)
+                            }catch (e:Exception){
+                                Toast.makeText(applicationContext,e.toString(),Toast.LENGTH_LONG).show()
+                            }
+
+//                            val ac = BitmapFactory.decodeResource(resources, R.drawable.people_thinking)
+////            val ac = captureScreen()
+////                            val b1 = toOpaqueWhite(ac)
+//                            val b2 = scaleToWidth(ac, 384)     // try 384 first
+//                            val b3 = toPureBlackWhite(b2, threshold = 110)
+//                            showPrintPreviewDialog(b2)
 
 //                            ledManager.enableLedIndicator(Led.LED_1,true)
                         }) {
