@@ -31,6 +31,8 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -71,8 +73,12 @@ class MainActivity : ComponentActivity() {
                                 "}\n")
                         Button(onClick = {
                             try {
-
-                                ledManager.enableLedIndicator(Led.LED_4,true)
+                                val bmp = createTestBitmap()
+//                                val mono = bitmapToMonoBytes(bmp)
+//                                val monoBmp = BitmapFactory.decodeByteArray(mono,0,mono.size)
+//showPrintPreviewDialog(toMono(toOpaqueWhite(bmp)))
+                                 showPrintPreviewDialog(toMonochromeOpaque(bmp))
+//                                ledManager.enableLedIndicator(Led.LED_4,true)
                             }catch (e:Exception){
                                 Toast.makeText(applicationContext,e.toString(),Toast.LENGTH_LONG).show()
                             }
@@ -179,6 +185,26 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    fun layoutToBitmap(): Bitmap {
+        // 1. Inflate the layout
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.printable_layout, null)
+
+        // 2. Measure and Layout the view
+        // Thermal printers usually have a fixed width (e.g., 384px), so we use that.
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(384, View.MeasureSpec.EXACTLY)
+        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+
+        view.measure(widthSpec, heightSpec)
+        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+
+        // 3. Create the Bitmap and Draw
+        val bitmap = createBitmap(view.measuredWidth, view.measuredHeight)
+        val canvas = Canvas(bitmap)
+        view.draw(canvas)
+
+        return bitmap
+    }
     fun bitmapToMonoBytes(src: Bitmap, threshold: Int = 160): ByteArray {
         val width = src.width
         val height = src.height
@@ -238,6 +264,71 @@ class MainActivity : ComponentActivity() {
         c.drawColor(android.graphics.Color.WHITE)
         c.drawBitmap(src, 0f, 0f, null)
         return out
+    }
+    fun toMonochromeOpaque(src: Bitmap, threshold: Int = 160): Bitmap {
+        val w = src.width
+        val h = src.height
+
+        // Create a new bitmap with RGB_565 (saves memory, no alpha needed)
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
+        val canvas = Canvas(out)
+
+        // Step 1: Handle Transparency (Flatten onto White)
+        canvas.drawColor(android.graphics.Color.WHITE)
+        canvas.drawBitmap(src, 0f, 0f, null)
+
+        // Step 2: Apply Monochrome Thresholding
+        // We modify 'out' in place since it now contains the flattened image
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                val p = out.getPixel(x, y)
+
+                // Extract RGB
+                val r = android.graphics.Color.red(p)
+                val g = android.graphics.Color.green(p)
+                val b =android.graphics. Color.blue(p)
+
+                // Calculate Luminance
+                val gray = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+
+                // Set pixel to strictly Black or White
+                val finalColor = if (gray < threshold)android.graphics. Color.BLACK else android.graphics. Color.WHITE
+                out.setPixel(x, y, finalColor)
+            }
+        }
+
+        return out
+    }
+
+    fun createTestBitmap(): Bitmap {
+        val width = 384
+        val height = 100
+        val border = 30
+
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+
+        // Fill white background
+        canvas.drawColor(android.graphics.Color.WHITE)
+
+        val paint = Paint().apply {
+            color = android.graphics.Color.BLACK
+            style = Paint.Style.FILL
+        }
+
+        // Top border
+        canvas.drawRect(0f, 0f, width.toFloat(), border.toFloat(), paint)
+
+        // Bottom border
+        canvas.drawRect(0f, (height - border).toFloat(), width.toFloat(), height.toFloat(), paint)
+
+        // Left border
+        canvas.drawRect(0f, 0f, border.toFloat(), height.toFloat(), paint)
+
+        // Right border
+        canvas.drawRect((width - border).toFloat(), 0f, width.toFloat(), height.toFloat(), paint)
+
+        return bitmap
     }
     fun captureScreen(): Bitmap {
         val view = window.decorView.rootView
